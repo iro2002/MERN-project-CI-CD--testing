@@ -1,6 +1,5 @@
 name: MERN CI/CD Pipeline
 
-# This workflow runs on any push to the 'main' branch
 on:
   push:
     branches: [ "main" ]
@@ -26,9 +25,11 @@ jobs:
           context: ./server
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/mern-server:latest
+          build-args: |
+            MONGO_URI=${{ secrets.MONGO_URI }}   
 
       - name: Build and push Client image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v4v
         with:
           context: ./client
           push: true
