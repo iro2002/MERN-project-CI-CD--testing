@@ -3,6 +3,8 @@ name: MERN CI/CD Pipeline
 on:
   push:
     branches: [ "main" ]
+    tags:
+      - 'v*'   # Runs also when you push a git tag like v1.0.0
 
 jobs:
   build-and-push:
@@ -19,18 +21,37 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
+      - name: Set version and short SHA
+        id: vars
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
+
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION=dev
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Build and push Server image
         uses: docker/build-push-action@v4
         with:
           context: ./server
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/mern-server:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/mern-server:latest
+            ${{ secrets.DOCKER_USERNAME }}/mern-server:${{ env.SHORT_SHA }}
+            ${{ secrets.DOCKER_USERNAME }}/mern-server:${{ env.VERSION }}
           build-args: |
-            MONGO_URI=${{ secrets.MONGO_URI }}   
+            MONGO_URI=${{ secrets.MONGO_URI }}
 
       - name: Build and push Client image
         uses: docker/build-push-action@v4
         with:
           context: ./client
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/mern-client:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/mern-client:latest
+            ${{ secrets.DOCKER_USERNAME }}/mern-client:${{ env.SHORT_SHA }}
+            ${{ secrets.DOCKER_USERNAME }}/mern-client:${{ env.VERSION }}
